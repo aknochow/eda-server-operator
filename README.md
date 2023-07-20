@@ -1,5 +1,7 @@
 # EDA Server Operator
 
+# ci testing the correct repo...
+
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Code of Conduct](https://img.shields.io/badge/code%20of%20conduct-Ansible-yellow.svg)](https://docs.ansible.com/ansible/latest/community/code_of_conduct.html) 
 
@@ -115,8 +117,8 @@ There are a few variables that are customizable for eda the image management.
 | ---------------------- | ------------------------- | --------------------------------------  |
 | image                  | Path of the image to pull | quay.io/ansible/eda-server              |
 | image_version          | Image version to pull     | main                                    |
-| image                  | Path of the image to pull | quay.io/ansible/eda-ui                  |
-| image_version          | Image version to pull     | latest                                  |
+| image_web              | Path of the image to pull | quay.io/ansible/eda-ui                  |
+| image_web_version      | Image version to pull     | latest                                  |
 | image_pull_policy      | The pull policy to adopt  | IfNotPresent                            |
 | image_pull_secrets     | The pull secrets to use   | None                                    |
 | redis_image            | Path of the image to pull | redis                                   |
