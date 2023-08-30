@@ -32,6 +32,8 @@ spec:
         {{ lookup("template", "../common/templates/labels/common.yaml.j2")  | indent(width=8) | trim }}
         {{ lookup("template", "../common/templates/labels/version.yaml.j2") | indent(width=8) | trim }}
         app.kubernetes.io/component: '{{ deployment_type }}-ui'
+      annotations:
+        kubectl.kubernetes.io/default-container: 'eda-ui'
     spec:
 {% if image_pull_secrets | length > 0 %}
       imagePullSecrets:
@@ -55,6 +57,9 @@ spec:
       - name: eda-ui
         image: {{ _image_web }}
         imagePullPolicy: '{{ image_pull_policy }}'
+        envFrom:
+          - configMapRef:
+              name: '{{ ansible_operator_meta.name }}-{{ deployment_type }}-env-properties'
         ports:
         - containerPort: 8080
         readinessProbe:
@@ -72,15 +77,3 @@ spec:
 {% if combined_ui.resource_requirements is defined %}
         resources: {{ combined_ui.resource_requirements }}
 {% endif %}
-        volumeMounts:
-          - name: {{ ansible_operator_meta.name }}-nginx-conf
-            mountPath: /etc/nginx/nginx.conf
-            subPath: nginx.conf
-            readOnly: true
-      volumes:
-        - name: {{ ansible_operator_meta.name }}-nginx-conf
-          configMap:
-            name: '{{ ansible_operator_meta.name }}-{{ deployment_type }}-configmap'
-            items:
-              - key: nginx_conf
-                path: nginx.conf
