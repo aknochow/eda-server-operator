@@ -111,7 +111,7 @@ Create a playbook that invokes the installer role (the operator uses ansible-run
           cpu: 200m
           memory: 512Mi
     activation_worker:
-      replicas: 2
+      replicas: 3
       resource_requirements:
         requests:
           cpu: 200m

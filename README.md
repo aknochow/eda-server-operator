@@ -9,28 +9,9 @@ A Kubernetes operator for Kubernetes built with [Operator SDK](https://github.co
 
 This operator is meant to provide a more Kubernetes-native installation method for EDA Server via an EDA Custom Resource Definition (CRD). In the future, this operator will grow to be able to maintain the full life-cycle of an EDA Server deployment. Currently, it can handle fresh installs and upgrades.
 
-Table of Contents
-=================
-
-- [EDA Server Operator](#eda-server-operator)
-  - [Overview](#overview)
-- [Table of Contents](#table-of-contents)
-  - [Contributing](#contributing)
-    - [Prerequisites](#prerequisites)
-  - [Install the EDA Server Operator](#install-the-eda-server-operator)
-  - [Deploy EDA](#deploy-eda)
-  - [Upgrades](#upgrades)
-  - [Advanced Configuration](#advanced-configuration)
-    - [Admin user account configuration](#admin-user-account-configuration)
-    - [Database Fields Encryption Configuration](#database-fields-encryption-configuration)
-    - [Additional Advanced Configuration](#additional-advanced-configuration)
-  - [Maintainers Docs](#maintainers-docs)
-
-<!-- Created by https://github.com/ekalinin/github-markdown-toc -->
-
 ## Contributing
 
-Please visit [our contributing guide](./CONTRIBUTING.md) which has details about how to set up your development environment.
+Please visit [our contributing guide](https://github.com/ansible/eda-server-operator/blob/devel/CONTRIBUTING.md) which has details about how to set up your development environment.
 
 ### Prerequisites
 
@@ -47,9 +28,6 @@ Please visit [our contributing guide](./CONTRIBUTING.md) which has details about
 Before you begin, you need to have a k8s cluster up. If you don't already have a k8s cluster, you can use minikube to start a lightweight k8s cluster locally by following these [minikube test cluster docs](./docs/minikube-test-cluster.md).
 
 Once you have a running Kubernetes cluster, you can deploy EDA Server Operator into your cluster using [Kustomize](https://kubectl.docs.kubernetes.io/guides/introduction/kustomize/). Since kubectl version 1.14 kustomize functionality is built-in (otherwise, follow the instructions here to install the latest version of Kustomize: https://kubectl.docs.kubernetes.io/installation/kustomize/)
-
-> [!Note]
-> If you want to do a single-command install with no modifications, please see these docs [here](./docs/single-command-install.md).
 
 First, create a file called `kustomization.yaml` with the following content:
 
@@ -145,13 +123,68 @@ $ kubectl get secret eda-demo-admin-password -o jsonpath="{.data.password}" | ba
 yDL2Cx5Za94g9MvBP6B73nzVLlmfgPjR
 ```
 
-## Upgrades
-
-We recommend you take an backup by creating an EDABackup resource before upgrading, particularly if the new version includes a PostgreSQL database version change.
-
-For information on how to upgrade, please see the [upgrading.md](./docs/upgrade/upgrading.md).
 
 ## Advanced Configuration
+
+### Deploying a specific version of EDA
+
+There are a few variables that are customizable for eda the image management.
+
+| Name                   | Description               | Default                                 |
+| ---------------------- | ------------------------- | --------------------------------------  |
+| image                  | Path of the image to pull | quay.io/ansible/eda-server              |
+| image_version          | Image version to pull     | main                                    |
+| image_web              | Path of the image to pull | quay.io/ansible/eda-ui                  |
+| image_web_version      | Image version to pull     | latest                                  |
+| image_pull_policy      | The pull policy to adopt  | IfNotPresent                            |
+| image_pull_secrets     | The pull secrets to use   | None                                    |
+| redis_image            | Path of the image to pull | redis                                   |
+| redis_image_version    | Image version to pull     | latest                                  |
+| postgres_image         | Path of the image to pull | postgres                                |
+| postgres_image_version | Image version to pull     | latest                                  |
+
+Example of customization could be:
+
+```yaml
+---
+spec:
+  ...
+  image: myorg/my-custom-eda
+  image_version: latest
+  image_web: myorg/my-custom-eda
+  image_web_version: latest
+  image_pull_policy: Always
+  image_pull_secrets:
+    - pull_secret_name
+```
+
+  > **Note**: The `image` and `image_version` style variables are intended for local mirroring scenarios. Please note that using a version of EDA other than the one bundled with the `eda-server-operator` is **not** supported even though it will likely work and can be useful for pinning a version. For the default values, check the [main.yml](https://github.com/ansible/eda-server-operator/blob/main/roles/eda/defaults/main.yml) file.
+
+
+### Configuring an image pull secret
+
+1. Log in with that token, or username/password, then create a pull secret from the docker/config.json
+
+```bash
+docker login quay.io -u <user> -p <token>
+```
+
+2. Then, create a k8s secret from your .docker/config.json file. This pull secret should be created in the same namespace you are installing the EDA Operator.
+
+```bash
+kubectl create secret generic redhat-operators-pull-secret \
+  --from-file=.dockerconfigjson=.docker/config.json \
+  --type=kubernetes.io/dockerconfigjson
+```
+
+3. Add that image pull secret to your EDA spec
+
+```yaml
+---
+spec:
+  image_pull_secrets:
+    - redhat-operators-pull-secret
+```
 
 ### Admin user account configuration
 
@@ -203,31 +236,17 @@ The secret should be formatted as follow:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: custom-eda-db-encryption-secret
+  name: custom-awx-db-encryption-secret
   namespace: <target namespace>
 stringData:
   secret_key: supersecuresecretkey
 ```
 
-Then specify the name of the k8s secret on the EDA spec:
+Then specify the name of the k8s secret on the AWX spec:
 
 ```yaml
 ---
 spec:
   ...
-  db_fields_encryption_secret: custom-eda-db-encryption-secret
+  db_fields_encryption_secret: custom-awx-db-encryption-secret
 ```
-
-### Additional Advanced Configuration
-- [No Log](./docs/user-guide/advanced-configuration/no-log.md)
-- [EDA application settings](./docs/user-guide/advanced-configuration/settings.md)
-- [Deploy a Specific Version of EDA](./docs/user-guide/advanced-configuration/deploying-a-specific-version.md)
-- [Trusting a Custom Certificate Authority](./docs/user-guide/advanced-configuration/trusting-a-custom-certificate-authority.md)
-- [Database Configuration](./docs/user-guide/database-configuration.md)
-
-## Maintainers Docs
-
-Maintainers of this repo need to carry out releases, triage issues, etc. There are docs for those types of administrative tasks in the `docs/maintainer/` directory.
-
-To release the EDA Server Operator, see these docs:
-* [Release Operator](./docs/maintainers/release.md)

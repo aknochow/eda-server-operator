@@ -34,16 +34,6 @@ spec:
         app.kubernetes.io/component: '{{ deployment_type }}-ui'
       annotations:
         kubectl.kubernetes.io/default-container: 'eda-ui'
-{% for template in [
-    "eda.configmap",
-  ] %}
-        checksum-{{ template | replace('/', '-') }}: "{{ lookup('template', template + '.yaml.j2') | sha1 }}"
-{% endfor %}
-{% for secret in [
-    "secrets/db_fields_encryption",
-  ] %}
-        checksum-secret-{{ secret }}: "{{ lookup('ansible.builtin.vars', secret, default='')["resources"][0]["data"] | default('') | sha1 }}"
-{% endfor %}
     spec:
 {% if image_pull_secrets | length > 0 %}
       imagePullSecrets:
@@ -53,11 +43,11 @@ spec:
 {% endif %}
 {% if combined_ui.node_selector is defined %}
       nodeSelector:
-        {{ combined_ui.node_selector | to_nice_yaml | indent(width=8) }}
+        {{ combined_ui.node_selector | indent(width=8) }}
 {% endif %}
 {% if combined_ui.tolerations is defined %}
       tolerations:
-        {{ combined_ui.tolerations | to_nice_yaml | indent(width=8) }}
+        {{ combined_ui.tolerations | indent(width=8) }}
 {% endif %}
 {% if combined_ui.topology_spread_constraints is defined %} %}
       topologySpreadConstraints:
@@ -87,15 +77,3 @@ spec:
 {% if combined_ui.resource_requirements is defined %}
         resources: {{ combined_ui.resource_requirements }}
 {% endif %}
-        volumeMounts:
-          - name: {{ ansible_operator_meta.name }}-nginx-default-conf-template
-            mountPath: /etc/nginx/nginx.conf
-            subPath: nginx.conf
-            readOnly: true
-      volumes:
-        - name: {{ ansible_operator_meta.name }}-nginx-default-conf-template
-          configMap:
-            name: '{{ ansible_operator_meta.name }}-{{ deployment_type }}-configmap'
-            items:
-              - key: nginx_default_conf_template
-                path: nginx.conf

@@ -34,16 +34,6 @@ spec:
         app.kubernetes.io/component: '{{ deployment_type }}-default-worker'
       annotations:
         kubectl.kubernetes.io/default-container: 'eda-default-worker'
-{% for template in [
-    "eda.configmap",
-  ] %}
-        checksum-{{ template | replace('/', '-') }}: "{{ lookup('template', template + '.yaml.j2') | sha1 }}"
-{% endfor %}
-{% for secret in [
-    "secrets/db_fields_encryption",
-  ] %}
-        checksum-secret-{{ secret }}: "{{ lookup('ansible.builtin.vars', secret, default='')["resources"][0]["data"] | default('') | sha1 }}"
-{% endfor %}
     spec:
       serviceAccountName: '{{ ansible_operator_meta.name }}'
 {% if image_pull_secrets | length > 0 %}
@@ -54,81 +44,15 @@ spec:
 {% endif %}
 {% if combined_default_worker.node_selector is defined %}
       nodeSelector:
-        {{ combined_default_worker.node_selector | to_nice_yaml | indent(width=8) }}
+        {{ combined_default_worker.node_selector | indent(width=8) }}
 {% endif %}
 {% if combined_default_worker.tolerations is defined %}
       tolerations:
-        {{ combined_default_worker.tolerations | to_nice_yaml | indent(width=8) }}
+        {{ combined_default_worker.tolerations | indent(width=8) }}
 {% endif %}
 {% if combined_default_worker.topology_spread_constraints is defined %} %}
       topologySpreadConstraints:
         {{ combined_default_worker.topology_spread_constraints | indent(width=8) }}
-{% endif %}
-      initContainers:
-      - name: wait-for-migrations
-        image: {{ _image }}
-        imagePullPolicy: '{{ image_pull_policy }}'
-        command:
-          - /bin/bash
-          - -c
-          - aap-eda-manage wait_for_migrations -t 60
-        envFrom:
-          - configMapRef:
-              name: '{{ ansible_operator_meta.name }}-{{ deployment_type }}-env-properties'
-        env:
-        - name: EDA_DB_HOST
-          valueFrom:
-            secretKeyRef:
-              name: '{{ __database_secret }}'
-              key: host
-        - name: EDA_DB_NAME
-          valueFrom:
-            secretKeyRef:
-              name: '{{ __database_secret }}'
-              key: database
-        - name: EDA_DB_PORT
-          valueFrom:
-            secretKeyRef:
-              name: '{{ __database_secret }}'
-              key: port
-        - name: EDA_DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: '{{ __database_secret }}'
-              key: username
-        - name: EDA_DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: '{{ __database_secret }}'
-              key: password
-        - name: EDA_SECRET_KEY
-          valueFrom:
-            secretKeyRef:
-              name: '{{ db_fields_encryption_secret_name }}'
-              key: secret_key
-{% if combined_default_worker.resource_requirements is defined %}
-        resources: {{ combined_default_worker.resource_requirements }}
-{% endif %}
-{% if bundle_ca_crt  %}
-      - name: configure-bundle-ca-cert
-        image: {{ _image }}
-        imagePullPolicy: '{{ image_pull_policy }}'
-        command:
-          - /bin/sh
-          - -c
-          - |
-            mkdir -p /etc/pki/ca-trust/extracted/{java,pem,openssl,edk2}
-            update-ca-trust
-{% if combined_default_worker.resource_requirements is defined %}
-        resources: {{ combined_default_worker.resource_requirements }}
-{% endif %}
-        volumeMounts:
-          - name: "ca-trust-extracted"
-            mountPath: "/etc/pki/ca-trust/extracted"
-          - name: "{{ ansible_operator_meta.name }}-bundle-cacert"
-            mountPath: /etc/pki/ca-trust/source/anchors/bundle-ca.crt
-            subPath: bundle-ca.crt
-            readOnly: true
 {% endif %}
       containers:
       - name: eda-default-worker
@@ -172,31 +96,15 @@ spec:
             secretKeyRef:
               name: '{{ db_fields_encryption_secret_name }}'
               key: secret_key
+        ports:
+        - containerPort: 8000
 {% if combined_default_worker.resource_requirements is defined %}
         resources: {{ combined_default_worker.resource_requirements }}
 {% endif %}
         volumeMounts:
           - name: "{{ ansible_operator_meta.name }}-media-data"
             mountPath: "{{ media_dir }}"
-{% if bundle_ca_crt %}
-          - name: "ca-trust-extracted"
-            mountPath: "/etc/pki/ca-trust/extracted"
-          - name: "{{ ansible_operator_meta.name }}-bundle-cacert"
-            mountPath: /etc/pki/ca-trust/source/anchors/bundle-ca.crt
-            subPath: bundle-ca.crt
-            readOnly: true
-{% endif %}
       restartPolicy: Always
       volumes:
         - name: {{ ansible_operator_meta.name }}-media-data
           emptyDir: {}
-{% if bundle_ca_crt %}
-        - name: "ca-trust-extracted"
-          emptyDir: {}
-        - name: "{{ ansible_operator_meta.name }}-bundle-cacert"
-          secret:
-            secretName: "{{ bundle_cacert_secret }}"
-            items:
-              - key: bundle-ca.crt
-                path: 'bundle-ca.crt'
-{% endif %}
