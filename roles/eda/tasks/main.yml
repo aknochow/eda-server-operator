@@ -19,11 +19,22 @@
 - name: Set EDA app images
   include_tasks: set_images.yml
 
+- name: Set Bundle Certificate Authority
+  include_tasks: set_bundle_cacert.yml
+  when:
+  - bundle_cacert_secret | length
+
 - name: Create DB fields encryption
   include_tasks: db_fields_encryption_configuration.yml
 
 - name: Create admin password
   include_tasks: admin_password_configuration.yml
+
+- name: Load Route TLS certificate
+  include_tasks: load_route_tls_secret.yml
+  when:
+    - ingress_type | lower == 'route'
+    - route_tls_secret | length
 
 - name: Deploy EDA
   include_tasks: deploy_eda.yml

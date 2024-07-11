@@ -4,7 +4,7 @@ deployment_type: eda
 database_name: "{{ deployment_type }}"
 database_username: "{{ deployment_type }}"
 
-_postgres_image: quay.io/sclorg/postgresql-13-c8s
+_postgres_image: quay.io/sclorg/postgresql-15-c9s
 _postgres_image_version: latest
 
 # Add a nodeSelector for the Postgres pods.
@@ -36,12 +36,16 @@ _database:
   storage_requirements:
     requests:
       storage: 8Gi
-  node_selector: ''
+  node_selector: {}
   priority_class: ''
-  tolerations: ''
-  postgres_data_path: '/var/lib/pgsql/data/userdata'
+  tolerations: []
   postgres_extra_args: ''
-  database_secret: '' # Name of k8s secret containing postgres host, username, password, database, port, and type
+  postgres_keep_pvc_after_upgrade: true  # Specify whether or not to keep the old PVC after PostgreSQL upgrades
+  postgres_data_volume_init: false
+  postgres_init_container_commands: |
+    chown 26:0 /var/lib/pgsql/data
+    chmod 700 /var/lib/pgsql/data
+  database_secret: ''  # Name of k8s secret containing postgres host, username, password, database, port, and type
 
 
 image_pull_policy: IfNotPresent

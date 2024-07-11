@@ -1,5 +1,5 @@
 ---
-apiVersion: v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: "{{ ansible_operator_meta.name }}-redis"
@@ -36,11 +36,11 @@ spec:
 {% endif %}
 {% if combined_redis.node_selector %}
       nodeSelector:
-        {{ combined_redis.node_selector | indent(width=8) }}
+        {{ combined_redis.node_selector | to_nice_yaml | indent(width=8) }}
 {% endif %}
 {% if combined_redis.tolerations %}
       tolerations:
-        {{ combined_redis.tolerations | indent(width=8) }}
+        {{ combined_redis.tolerations | to_nice_yaml | indent(width=8) }}
 {% endif %}
       containers:
         - name: redis
